@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Practice App</title>
+    <style>
+        /* Basic CSS for styling the app */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+        }
+
+        .controls label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .controls select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 1em;
+        }
+
+        #scoreDisplay {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        #correctCount {
+            color: #28a745; /* Green */
+        }
+
+        #incorrectCount {
+            color: #dc3545; /* Red */
+        }
+
+        #problemDisplay {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        #answerInput {
+            padding: 10px;
+            font-size: 1.2em;
+            width: calc(100% - 22px); /* Account for padding and border */
+            max-width: 200px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em;
+            margin: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        #checkAnswerBtn {
+            background-color: #007bff;
+        }
+
+        #checkAnswerBtn:hover {
+            background-color: #0056b3;
+        }
+
+        #resetScoreBtn {
+            background-color: #ffc107; /* Orange */
+            color: #333;
+        }
+
+        #resetScoreBtn:hover {
+            background-color: #e0a800;
+        }
+
+        #feedback {
+            margin-top: 20px;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .correct {
+            color: #28a745; /* Green for correct */
+        }
+
+        .incorrect {
+            color: #dc3545; /* Red for incorrect */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Math Practice</h1>
+
+        <div class="controls">
+            <label for="difficultySelect">Difficulty:</label>
+            <select id="difficultySelect">
+                <option value="easy">Easy (1-10)</option>
+                <option value="medium">Medium (1-25)</option>
+                <option value="hard">Hard (1-100)</option>
+            </select>
+        </div>
+
+        <div id="scoreDisplay">
+            Correct: <span id="correctCount">0</span> | Incorrect: <span id="incorrectCount">0</span>
+        </div>
+
+        <div id="problemDisplay"></div>
+        <input type="number" id="answerInput" placeholder="Your Answer">
+        <br>
+        <button id="checkAnswerBtn">Check Answer</button>
+        <button id="newProblemBtn">New Problem</button>
+        <button id="resetScoreBtn">Reset Score</button>
+        <div id="feedback"></div>
+    </div>
+
+    <script>
+        // JavaScript for the Math Practice App
+
+        const problemDisplay = document.getElementById('problemDisplay');
+        const answerInput = document.getElementById('answerInput');
+        const checkAnswerBtn = document.getElementById('checkAnswerBtn');
+        const newProblemBtn = document.getElementById('newProblemBtn');
+        const feedback = document.getElementById('feedback');
+        const correctCountSpan = document.getElementById('correctCount');
+        const incorrectCountSpan = document.getElementById('incorrectCount');
+        const resetScoreBtn = document.getElementById('resetScoreBtn');
+        const difficultySelect = document.getElementById('difficultySelect');
+
+        let correctAnswer;
+        let currentProblemType; // To track if it's arithmetic or pattern
+
+        let correctCount = 0;
+        let incorrectCount = 0;
+
+        // Function to update the score display
+        function updateScoreDisplay() {
+            correctCountSpan.textContent = correctCount;
+            incorrectCountSpan.textContent = incorrectCount;
+        }
+
+        // Function to generate a random integer between min and max (inclusive)
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // Function to get number range based on difficulty
+        function getNumberRange(difficulty) {
+            switch (difficulty) {
+                case 'easy':
+                    return { min: 1, max: 10, patternMaxDiff: 5 }; // Added patternMaxDiff
+                case 'medium':
+                    return { min: 1, max: 25, patternMaxDiff: 10 };
+                case 'hard':
+                    return { min: 1, max: 100, patternMaxDiff: 20 };
+                default:
+                    return { min: 1, max: 10, patternMaxDiff: 5 }; // Default to easy
+            }
+        }
+
+        // --- New Function for Numeric Patterns ---
+        function generateNumericPattern(minNum, maxNum, maxDifference) {
+            const patternLength = 4; // Display 4 numbers in the pattern
+
+            let pattern = [];
+            let startNum = getRandomInt(minNum, maxNum);
+            let commonDiff = getRandomInt(1, maxDifference); // Common difference/ratio
+            let operationType = getRandomInt(0, 1); // 0 for addition, 1 for subtraction (for arithmetic)
+
+            // Randomly decide between arithmetic and geometric (simple) for pattern
+            let patternType = getRandomInt(0, 1); // 0 for arithmetic, 1 for simple multiplication (geometric)
+
+            if (patternType === 0) { // Arithmetic Progression
+                // Ensure the numbers don't get too small or too large too quickly
+                if (operationType === 1) { // Subtraction
+                    // Ensure startNum is large enough to allow for a few subtractions without going negative immediately
+                    startNum = getRandomInt(commonDiff * (patternLength + 1), maxNum);
+                    for (let i = 0; i < patternLength; i++) {
+                        pattern.push(startNum - (i * commonDiff));
+                    }
+                    correctAnswer = startNum - (patternLength * commonDiff);
+                } else { // Addition
+                    for (let i = 0; i < patternLength; i++) {
+                        pattern.push(startNum + (i * commonDiff));
+                    }
+                    correctAnswer = startNum + (patternLength * commonDiff);
+                }
+                currentProblemType = 'pattern';
+                return `${pattern.join(', ')}, ... what is the next number?`;
+            } else { // Simple Geometric Progression (Multiplication only for now, avoid division for simplicity)
+                // Ensure numbers don't grow too large
+                commonDiff = getRandomInt(2, 4); // Small common ratio for now (2, 3, 4)
+                startNum = getRandomInt(1, Math.floor(maxNum / (commonDiff ** (patternLength - 1)))); // Ensure last visible term fits maxNum
+                if (startNum === 0) startNum = 1; // Avoid starting with 0 for multiplication patterns
+
+                for (let i = 0; i < patternLength; i++) {
+                    pattern.push(startNum * (commonDiff ** i));
+                }
+                correctAnswer = startNum * (commonDiff ** patternLength);
+                currentProblemType = 'pattern';
+                return `${pattern.join(', ')}, ... what is the next number?`;
+            }
+        }
+        // --- End New Function ---
+
+
+        // Function to generate a new math problem (now includes patterns)
+        function generateProblem() {
+            const selectedDifficulty = difficultySelect.value;
+            const { min, max, patternMaxDiff } = getNumberRange(selectedDifficulty);
+
+            // Randomly choose between an arithmetic problem or a pattern problem
+            const problemType = getRandomInt(0, 1); // 0 for arithmetic, 1 for pattern
+
+            if (problemType === 0) { // Arithmetic Problem
+                currentProblemType = 'arithmetic';
+                let num1 = getRandomInt(min, max);
+                let num2 = getRandomInt(min, max);
+                const operators = ['+', '-', '*', '/'];
+                let currentOperator = operators[getRandomInt(0, operators.length - 1)];
+
+                let problemString;
+
+                // Ensure division results in a whole number for simplicity
+                if (currentOperator === '/') {
+                    if (num2 === 0) num2 = getRandomInt(1, max); // Avoid division by zero
+                    num1 = num1 * num2; // Make num1 a multiple of num2
+                    problemString = `${num1} ${currentOperator} ${num2} = ?`;
+                    correctAnswer = num1 / num2;
+                } else {
+                    problemString = `${num1} ${currentOperator} ${num2} = ?`;
+                    switch (currentOperator) {
+                        case '+':
+                            correctAnswer = num1 + num2;
+                            break;
+                        case '-':
+                            // Ensure subtraction doesn't result in negative numbers on easy/medium
+                            if (selectedDifficulty !== 'hard' && num1 < num2) {
+                                [num1, num2] = [num2, num1]; // Swap numbers
+                            }
+                            correctAnswer = num1 - num2;
+                            break;
+                        case '*':
+                            correctAnswer = num1 * num2;
+                            break;
+                    }
+                }
+                problemDisplay.textContent = problemString;
+
+            } else { // Numeric Pattern Problem
+                problemDisplay.textContent = generateNumericPattern(min, max, patternMaxDiff);
+            }
+
+            answerInput.value = ''; // Clear the input field
+            feedback.textContent = ''; // Clear previous feedback
+            feedback.className = ''; // Remove any previous feedback classes
+            answerInput.focus(); // Put cursor in the input field
+        }
+
+        // Function to check the user's answer
+        function checkAnswer() {
+            const userAnswer = parseInt(answerInput.value); // Get user's answer as an integer
+
+            if (isNaN(userAnswer)) {
+                feedback.textContent = "Please enter a number!";
+                feedback.className = 'incorrect';
+                return;
+            }
+
+            if (userAnswer === correctAnswer) {
+                feedback.textContent = "Correct!";
+                feedback.className = 'correct';
+                correctCount++;
+            } else {
+                feedback.textContent = `Incorrect. The answer was ${correctAnswer}.`;
+                feedback.className = 'incorrect';
+                incorrectCount++;
+            }
+            updateScoreDisplay(); // Update the score displayed on the page
+        }
+
+        // Function to reset the score
+        function resetScore() {
+            correctCount = 0;
+            incorrectCount = 0;
+            updateScoreDisplay();
+            feedback.textContent = "Score reset!";
+            feedback.className = '';
+            generateProblem(); // Generate a new problem after reset
+        }
+
+        // Event Listeners
+        checkAnswerBtn.addEventListener('click', checkAnswer);
+        newProblemBtn.addEventListener('click', generateProblem);
+        resetScoreBtn.addEventListener('click', resetScore);
+        difficultySelect.addEventListener('change', generateProblem); // Generate new problem when difficulty changes
+
+        // Allow pressing Enter key to check answer
+        answerInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                checkAnswer();
+            }
+        });
+
+        // Initialize the first problem and score display when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            generateProblem();
+            updateScoreDisplay();
+        });
+
+    </script>
+</body>
+</html>
